@@ -7,13 +7,13 @@ This project studies how training-time data augmentation affects the stability o
 We run controlled experiments on small benchmark datasets (tabular and image) and compare explanation stability across multiple training runs.
 
 ## Setup
-1. Create a Python 3.10 virtual environment
+1. Create a Python 3.10 conda environment
 ```bash
-python3.10 -m venv venv
+conda create -n iml-sfauda python=3.10
 ```
-2. Activate the virtual environment
+2. Activate the conda environment
 ```bash
-source venv/bin/activate
+conda activate iml-sfauda
 ```
 3. Install required dependencies
 ```bash
