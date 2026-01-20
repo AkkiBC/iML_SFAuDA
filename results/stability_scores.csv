@@ -1,0 +1,4 @@
+mean_variance,mean_correlation,dataset,augmentation,expl_method,mean_accuracy
+1.0030885127016853e-36,1.0,iris,no_augmentation,shap,1.0
+0.00024372265951646058,0.9765235051194535,iris,add_random_noise,shap,1.0
+1.3049612272760305e-05,0.9615225932103009,wine,no_augmentation,lime,1.0
