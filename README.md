@@ -23,17 +23,24 @@ pip install -r requirements.txt
 ## Project structure
 ```bash
 iml-explanation-stability/
+├── results/
+│   # Experiment outputs
+├────── stability_scores.csv
+│       # Output of stability scores
+│
+├── LICENSE
+│
 ├── README.md
 │   # Project overview and setup instructions
-│
-├── requirements.txt
-│   # Python dependencies
 │
 ├── augmentations.py
 │   # Data augmentation and perturbation methods.
 │
 ├── explanations.py
 │   # SHAP and LIME explanation logic.
+│
+├── iML_Project_Proposal.pdf
+│   # Initial project proposal.
 │
 ├── main.py
 │   # Runs experiments.
@@ -44,30 +51,11 @@ iml-explanation-stability/
 ├── models.py
 │   # Model definitions and training.
 │
+├── requirements.txt
+│   # Python dependencies
+│
 ├── utils.py
 │   # Shared helper functions.
-│
-├── data/
-│   # Datasets used in experiments
-│   ├── raw/
-│   └── processed/
-│
-├── experiments/
-│   # Reproducible experiment scripts
-│
-├── results/
-│   # Experiment outputs
-│   ├── figures/
-│   └── tables/
-│
-├── src/
-│   # Core project code
-│   ├── augmentations/
-│   ├── datasets/
-│   ├── explainers/
-│   ├── metrics/
-│   ├── models/
-│   └── utils/
 ```
 
 ## Status
