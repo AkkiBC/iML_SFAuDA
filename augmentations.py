@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
 def no_augmentation(X, dataset_type=None):
     return X
@@ -19,3 +20,17 @@ def geometric_transform(X, dataset_type='tabular'):
     else:
         # For tabular, fallback to noise
         return add_random_noise(X)
+    
+def scale_standard(X, dataset_type=None):
+    # Standard scaling: zero mean, unit variance
+    if dataset_type != 'tabular':
+        return X
+    scaler = StandardScaler()
+    return scaler.fit_transform(X)
+
+def scale_minmax(X, dataset_type=None):
+    # Min–max scaling to [0, 1]
+    if dataset_type != 'tabular':
+        return X
+    scaler = MinMaxScaler()
+    return scaler.fit_transform(X)
