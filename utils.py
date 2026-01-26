@@ -7,11 +7,14 @@ import pandas as pd
 def load_tabular_dataset(name):
     if name == 'iris':
         data = load_iris()
+        X, y = data.data, data.target
+        mask = y < 2  # binary classification
+        X, y = X[mask], y[mask]
     elif name == 'wine':
         data = load_wine()
+        X, y = data.data, data.target
     else:
         raise ValueError("Unsupported dataset")
-    X, y = data.data, data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     return X_train, X_test, y_train, y_test
 
