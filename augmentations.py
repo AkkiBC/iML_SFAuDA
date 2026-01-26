@@ -34,3 +34,27 @@ def scale_minmax(X, dataset_type=None):
         return X
     scaler = MinMaxScaler()
     return scaler.fit_transform(X)
+
+def scale_robust(X, dataset_type=None):
+    # Robust scaling using median and IQR.
+    # Representation-preserving for tabular data.
+    if dataset_type != 'tabular':
+        return X
+    scaler = RobustScaler()
+    return scaler.fit_transform(X)
+
+def feature_jitter(X, noise_ratio=0.05, dataset_type=None):
+    # Add Gaussian noise proportional to per-feature standard deviation.
+    # Preserves relative feature importance.
+    if dataset_type != 'tabular':
+        return X
+
+    std = X.std(axis=0, keepdims=True)
+    noise = np.random.normal(0, noise_ratio * std, size=X.shape)
+    return X + noise
+
+def bootstrap_resample(X, dataset_type=None):
+    # Bootstrap resampling of rows (with replacement).
+    # Preserves feature space, changes empirical distribution.
+    idx = np.random.choice(len(X), size=len(X), replace=True)
+    return X[idx]
