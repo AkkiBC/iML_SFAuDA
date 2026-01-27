@@ -1,5 +1,5 @@
 import numpy as np
-from utils import load_tabular_dataset, load_image_dataset, save_results
+from utils import load_tabular_dataset, load_image_dataset, make_performance_table, make_stability_table, save_results
 from augmentations import no_augmentation, add_random_noise, scale_standard, scale_minmax, scale_robust, feature_jitter, bootstrap_resample, geometric_transform
 from models import train_model, evaluate_model
 from explanations import compute_shap_explanations, compute_lime_explanations
@@ -70,4 +70,6 @@ if __name__ == "__main__":
     save_results(results)
     plot_accuracy_vs_worst_case_stability()
     plot_accuracy_vs_mean_stability()
+    make_performance_table()
+    make_stability_table()
     print("Experiments complete. Results saved to results/stability_scores.csv")

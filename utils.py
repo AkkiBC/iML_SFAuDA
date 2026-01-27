@@ -61,3 +61,70 @@ def annotate_points(ax, x, y, text, used_positions, base_offset=(6, 6), step=10,
         xytext=(dx, dy),
         fontsize=fontsize
     )
+
+def make_performance_table(
+    input_csv="results/stability_scores.csv",
+    output_md="results/table_performance.md",
+):
+    """
+    Table A — Model performance only.
+    Columns: Dataset | Augmentation | Explainer | Accuracy
+    """
+
+    df = pd.read_csv(input_csv)
+
+    table = (
+        df[["dataset", "augmentation", "expl_method", "mean_accuracy"]]
+        .rename(columns={
+            "dataset": "Dataset",
+            "augmentation": "Augmentation",
+            "expl_method": "Explainer",
+            "mean_accuracy": "Accuracy",
+        })
+        .drop_duplicates()
+        .sort_values(["Dataset", "Explainer", "Augmentation"])
+        .round(3)
+        .reset_index(drop=True)
+    )
+
+    table.to_markdown(output_md, index=False)
+
+    return table
+
+
+def make_stability_table(
+    input_csv="results/stability_scores.csv",
+    output_md="results/table_stability.md",
+):
+    """
+    Table B — Explanation stability.
+    Columns: Dataset | Augmentation | Explainer | Mean Stability | Worst-Case Stability
+    """
+
+    df = pd.read_csv(input_csv)
+
+    table = (
+        df[[
+            "dataset",
+            "augmentation",
+            "expl_method",
+            "mean_correlation",
+            "min_correlation",
+        ]]
+        .rename(columns={
+            "dataset": "Dataset",
+            "augmentation": "Augmentation",
+            "expl_method": "Explainer",
+            "mean_correlation": "Mean Stability",
+            "min_correlation": "Worst-Case Stability",
+        })
+        .dropna(subset=["Mean Stability", "Worst-Case Stability"])
+        .drop_duplicates()
+        .sort_values(["Dataset", "Explainer", "Augmentation"])
+        .round(3)
+        .reset_index(drop=True)
+    )
+
+    table.to_markdown(output_md, index=False)
+
+    return table
