@@ -4,7 +4,7 @@ from augmentations import no_augmentation, add_random_noise, scale_standard, sca
 from models import train_model, evaluate_model
 from explanations import compute_shap_explanations, compute_lime_explanations
 from metrics import compute_stability
-from plots import plot_accuracy_vs_stability, plot_stability_by_augmentation
+from plots import plot_accuracy_vs_worst_case_stability
 
 def run_experiment(dataset_name, aug_strategy, expl_method, num_runs=5):
     if dataset_name in ['iris', 'wine']:
@@ -41,7 +41,7 @@ def run_experiment(dataset_name, aug_strategy, expl_method, num_runs=5):
 
 if __name__ == "__main__":
     configs = [
-        # SHAP
+        # Iris - SHAP
         ("iris", no_augmentation, "shap"),
         ("iris", add_random_noise, "shap"),
         ("iris", scale_standard, "shap"),
@@ -50,11 +50,17 @@ if __name__ == "__main__":
         ("iris", feature_jitter, "shap"),
         ("iris", bootstrap_resample, "shap"),
         ('iris', add_random_noise, 'shap'),
-        ('iris', geometric_transform, 'shap'),
-        # LIME
+        # ('iris', geometric_transform, 'shap'),
+        # Iris LIME
         ("iris", no_augmentation, "lime"),
         ("iris", scale_standard, "lime"),
         ("iris", scale_minmax, "lime"),
+        # Wine 
+        ("wine", no_augmentation, "shap"),
+        ("wine", scale_standard, "shap"),
+        ("wine", feature_jitter, "shap"),
+        ("wine", bootstrap_resample, "shap"),
+        ("wine", no_augmentation, "lime"),
         # Add more: MNIST, geometric_transform, etc.
     ]
     results = []
@@ -62,6 +68,5 @@ if __name__ == "__main__":
         result = run_experiment(*config)
         results.append(result)
     save_results(results)
-    plot_accuracy_vs_stability()
-    plot_stability_by_augmentation()
+    plot_accuracy_vs_worst_case_stability()
     print("Experiments complete. Results saved to results/stability_scores.csv")
