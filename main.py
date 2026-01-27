@@ -4,7 +4,7 @@ from augmentations import no_augmentation, add_random_noise, scale_standard, sca
 from models import train_model, evaluate_model
 from explanations import compute_shap_explanations, compute_lime_explanations
 from metrics import compute_stability
-from plots import plot_accuracy_vs_worst_case_stability
+from plots import plot_accuracy_vs_worst_case_stability, plot_accuracy_vs_mean_stability
 
 def run_experiment(dataset_name, aug_strategy, expl_method, num_runs=5):
     if dataset_name in ['iris', 'wine']:
@@ -26,7 +26,7 @@ def run_experiment(dataset_name, aug_strategy, expl_method, num_runs=5):
         accuracies.append(acc)
         
         if expl_method == 'shap':
-            attrib = compute_shap_explanations(model, X_train_aug, X_test)
+            attrib = compute_shap_explanations(model, X_train_aug, X_test, dataset_name)
         elif expl_method == 'lime':
             attrib = compute_lime_explanations(model, X_train_aug, X_test)
         attributions.append(attrib)
@@ -69,4 +69,5 @@ if __name__ == "__main__":
         results.append(result)
     save_results(results)
     plot_accuracy_vs_worst_case_stability()
+    plot_accuracy_vs_mean_stability()
     print("Experiments complete. Results saved to results/stability_scores.csv")
