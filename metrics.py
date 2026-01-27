@@ -2,15 +2,12 @@ import numpy as np
 from scipy.stats import pearsonr
 
 def compute_stability(attributions_list):
-    """
-    Stability metrics:
-    - Mean variance: sensitivity of feature importance across runs
-    - Mean Pearson correlation: agreement between runs
-    """
     attributions = np.array(attributions_list)
-    mean_attrib = np.mean(attributions, axis=0)
-    variance = np.var(attributions, axis=0)
 
+    # Feature-wise variance across runs
+    feature_variance = np.var(attributions, axis=0)
+
+    # Pairwise correlations across runs
     correlations = []
     for i in range(len(attributions)):
         for j in range(i + 1, len(attributions)):
@@ -20,6 +17,8 @@ def compute_stability(attributions_list):
             correlations.append(corr)
 
     return {
-        "mean_variance": float(np.mean(variance)),
-        "mean_correlation": float(np.mean(correlations)) if correlations else 1.0
+        "mean_feature_variance": float(np.mean(feature_variance)),
+        "median_feature_variance": float(np.median(feature_variance)),
+        "mean_correlation": float(np.mean(correlations)) if correlations else 1.0,
+        "min_correlation": float(np.min(correlations)) if correlations else 1.0,
     }
