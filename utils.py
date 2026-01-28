@@ -27,41 +27,6 @@ def load_image_dataset():
 def save_results(stability_scores, filename='results/stability_scores.csv'):
     pd.DataFrame(stability_scores).to_csv(filename, index=False)
 
-def annotate_points(ax, x, y, text, used_positions, base_offset=(6, 6), step=10, max_shifts=6, fontsize=8):
-    """
-    Place annotations while avoiding overlaps by shifting vertically.
-    """
-    dx, dy = base_offset
-
-    for i in range(max_shifts):
-        candidate = (x, y + i * 0.02)
-
-        if candidate not in used_positions:
-            used_positions.add(candidate)
-
-            ax.annotate(
-                text,
-                (x, y),
-                textcoords="offset points",
-                xytext=(dx, dy + i * step),
-                fontsize=fontsize,
-                arrowprops=dict(
-                    arrowstyle="-",
-                    linewidth=1,
-                    alpha=0.6
-                )
-            )
-            return
-
-    # fallback (if everything overlaps)
-    ax.annotate(
-        text,
-        (x, y),
-        textcoords="offset points",
-        xytext=(dx, dy),
-        fontsize=fontsize
-    )
-
 def make_performance_table(
     input_csv="results/stability_scores.csv",
     output_md="results/table_performance.md",
