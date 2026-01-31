@@ -1,10 +1,10 @@
 import numpy as np
-from utils import load_tabular_dataset, load_image_dataset, make_performance_table, make_stability_table, save_results
+from utils import load_tabular_dataset, load_image_dataset, save_results
 from augmentations import no_augmentation, add_random_noise, scale_standard, scale_minmax, scale_robust, feature_jitter, geometric_transform
 from models import train_model, evaluate_model
 from explanations import compute_shap_explanations, compute_lime_explanations
 from metrics import compute_stability
-from plots import plot_all_stability_intervals
+
 
 
 # =========================
@@ -22,38 +22,38 @@ EXPLAINERS = ["shap", "lime"]
 AUGMENTATIONS_CONFIG = {
     "iris": {
         "shap": [
-            no_augmentation,
-            add_random_noise,
-            feature_jitter,
-            scale_standard,
-            scale_minmax,
-            scale_robust,
+            # no_augmentation,
+            # add_random_noise,
+            # feature_jitter,
+            # scale_standard,
+            # scale_minmax,
+            # scale_robust,
         ],
         "lime": [
-            no_augmentation,
-            add_random_noise,
-            feature_jitter,
-            scale_standard,
-            scale_minmax,
-            scale_robust,
+            # no_augmentation,
+            # add_random_noise,
+            # feature_jitter,
+            # scale_standard,
+            # scale_minmax,
+            # scale_robust,
         ],
     },
     "wine": {
         "shap": [
-            no_augmentation,
-            add_random_noise,
-            feature_jitter,
-            scale_standard,
-            scale_minmax,
-            scale_robust,
+            # no_augmentation,
+            # add_random_noise,
+            # feature_jitter,
+            # scale_standard,
+            # scale_minmax,
+            # scale_robust,
         ],
         "lime": [
-            no_augmentation,
-            add_random_noise,
-            feature_jitter,
-            scale_standard,
-            scale_minmax,
-            scale_robust,
+            # no_augmentation,
+            # add_random_noise,
+            # feature_jitter,
+            # scale_standard,
+            # scale_minmax,
+            # scale_robust,
         ],
     },
     "mnist": {
@@ -65,6 +65,7 @@ AUGMENTATIONS_CONFIG = {
         "lime": [
             no_augmentation,
             geometric_transform,
+            add_random_noise
         ],
     },
 }
@@ -75,16 +76,16 @@ AUGMENTATIONS_CONFIG = {
 
 NUM_RUNS = {
     "iris": {
-        "shap": 8,
-        "lime": 5,
+        "shap": 10,
+        "lime": 10,
     },
     "wine": {
-        "shap": 8,
-        "lime": 5,
+        "shap": 10,
+        "lime": 10,
     },
     "mnist": {
-        "shap": 3,
-        "lime": 3,
+        "shap": 2,
+        "lime": 2,
     },
 }
 
@@ -117,10 +118,10 @@ def run_experiment(dataset_name, augmentation_fn, explainer, num_runs=5):
     lime_num_samples = None
 
     if dataset_name == "mnist":  # ← MNIST
-        expl_subsample_size = 100
+        expl_subsample_size = 200
         if explainer == "lime":
-            lime_num_features = 50
-            lime_num_samples = 1500
+            lime_num_features = 150
+            lime_num_samples = 5000
 
     # =========================
     # RUNS
@@ -207,9 +208,5 @@ if __name__ == "__main__":
                 results.append(result)
 
     save_results(results)
-
-    plot_all_stability_intervals()
-    make_performance_table()
-    make_stability_table()
 
     print("Experiments complete. Results saved.")

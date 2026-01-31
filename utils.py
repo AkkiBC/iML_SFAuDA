@@ -20,9 +20,25 @@ def load_tabular_dataset(name):
 
 def load_image_dataset():
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
-    X_train = X_train.reshape(-1, 28*28) / 255.0  # Flatten and normalize
-    X_test = X_test.reshape(-1, 28*28) / 255.0
-    return X_train[:5000], X_test[:1000], y_train[:5000], y_test[:1000]  # Subset for speed
+    
+    # Keep only digits 1 and 4
+    train_mask = np.isin(y_train, [1, 4])
+    test_mask  = np.isin(y_test,  [1, 4])
+    
+    X_train = X_train[train_mask].reshape(-1, 28*28) / 255.0
+    y_train = y_train[train_mask]
+    X_test  = X_test[test_mask].reshape(-1, 28*28)  / 255.0
+    y_test  = y_test[test_mask]
+    
+    # Make binary: 1 → 0, 4 → 1  (or vice versa – doesn't matter)
+    y_train = (y_train == 4).astype(int)
+    y_test  = (y_test  == 4).astype(int)
+    
+    # Optional: take smaller subset if still too slow
+    # X_train = X_train[:8000]
+    # y_train = y_train[:8000]
+    
+    return X_train[:5000], X_test[:1000], y_train[:5000], y_test[:1000]
 
 def save_results(stability_scores, filename='results/stability_scores.csv'):
     pd.DataFrame(stability_scores).to_csv(filename, index=False)
