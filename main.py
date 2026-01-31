@@ -22,38 +22,38 @@ EXPLAINERS = ["shap", "lime"]
 AUGMENTATIONS_CONFIG = {
     "iris": {
         "shap": [
-            # no_augmentation,
-            # add_random_noise,
-            # feature_jitter,
-            # scale_standard,
-            # scale_minmax,
-            # scale_robust,
+            no_augmentation,
+            add_random_noise,
+            feature_jitter,
+            scale_standard,
+            scale_minmax,
+            scale_robust,
         ],
         "lime": [
-            # no_augmentation,
-            # add_random_noise,
-            # feature_jitter,
-            # scale_standard,
-            # scale_minmax,
-            # scale_robust,
+            no_augmentation,
+            add_random_noise,
+            feature_jitter,
+            scale_standard,
+            scale_minmax,
+            scale_robust,
         ],
     },
     "wine": {
         "shap": [
-            # no_augmentation,
-            # add_random_noise,
-            # feature_jitter,
-            # scale_standard,
-            # scale_minmax,
-            # scale_robust,
+            no_augmentation,
+            add_random_noise,
+            feature_jitter,
+            scale_standard,
+            scale_minmax,
+            scale_robust,
         ],
         "lime": [
-            # no_augmentation,
-            # add_random_noise,
-            # feature_jitter,
-            # scale_standard,
-            # scale_minmax,
-            # scale_robust,
+            no_augmentation,
+            add_random_noise,
+            feature_jitter,
+            scale_standard,
+            scale_minmax,
+            scale_robust,
         ],
     },
     "mnist": {
@@ -76,16 +76,16 @@ AUGMENTATIONS_CONFIG = {
 
 NUM_RUNS = {
     "iris": {
-        "shap": 10,
-        "lime": 10,
+        "shap": 20,
+        "lime": 20,
     },
     "wine": {
-        "shap": 10,
-        "lime": 10,
+        "shap": 20,
+        "lime": 20,
     },
     "mnist": {
-        "shap": 2,
-        "lime": 2,
+        "shap": 20,
+        "lime": 20,
     },
 }
 
@@ -118,9 +118,9 @@ def run_experiment(dataset_name, augmentation_fn, explainer, num_runs=5):
     lime_num_samples = None
 
     if dataset_name == "mnist":  # ← MNIST
-        expl_subsample_size = 200
+        expl_subsample_size = 300
         if explainer == "lime":
-            lime_num_features = 150
+            lime_num_features = 200
             lime_num_samples = 5000
 
     # =========================
