@@ -19,6 +19,14 @@ conda activate iml-sfauda
 ```bash
 pip install -r requirements.txt
 ```
+4. Run the code
+```bash
+python .\main.py
+```
+5. Plot the results
+```bash
+python .\plots.py
+```
 
 ## Project structure
 ```bash
@@ -57,6 +65,3 @@ iml-explanation-stability/
 ├── utils.py
 │   # Shared helper functions.
 ```
-
-## Status
-Project setup and baseline experiments in progress.
