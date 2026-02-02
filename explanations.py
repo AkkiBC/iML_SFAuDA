@@ -5,10 +5,12 @@ import numpy as np
 from tqdm import tqdm
 
 
+# =========================
+# SHAP EXPLANATIONS
+# =========================
+
 def compute_shap_explanations(model, X_train, X_test, dataset_name, background_size=20):
-    if dataset_name == "mnist":
-        background = shap.kmeans(X_train, background_size)
-    elif dataset_name == "wine":
+    if dataset_name in ["mnist", "wine"]:
         background = shap.kmeans(X_train, background_size)
     else:
         background = X_train
@@ -16,21 +18,22 @@ def compute_shap_explanations(model, X_train, X_test, dataset_name, background_s
     explainer = shap.KernelExplainer(model.predict_proba, background)
     shap_values = explainer.shap_values(X_test)
 
-    # ─── Binary-safe handling ───────────────────────────────────────
+    # Binary classification handling
     if isinstance(shap_values, list):
         if len(shap_values) == 2:
-            # Binary classification → usually take positive class
             shap_values = shap_values[1]
         else:
-            # Unexpected → fallback to average (rare)
             shap_values = np.mean(np.stack(shap_values, axis=-1), axis=-1)
-    # ────────────────────────────────────────────────────────────────
 
     if shap_values.ndim == 3:
-        shap_values = np.mean(shap_values, axis=-1)   # shouldn't happen in binary
+        shap_values = np.mean(shap_values, axis=-1)
 
-    return shap_values   # expected shape: (n_samples, n_features)
+    return shap_values
 
+
+# =========================
+# LIME EXPLANATIONS
+# =========================
 
 def compute_lime_explanations(model, X_train, X_test, num_features=None, num_samples=None):
     if num_features is None:
@@ -54,15 +57,13 @@ def compute_lime_explanations(model, X_train, X_test, num_features=None, num_sam
             num_samples=num_samples
         )
 
-        # ─── Binary-safe: take the explanation for the predicted class ───
         if len(exp.available_labels()) == 0:
-            weights = np.zeros(X_train.shape[1])  # fallback
+            weights = np.zeros(X_train.shape[1])
         else:
-            label = exp.available_labels()[0]     # highest prob class
+            label = exp.available_labels()[0]
             weights = np.zeros(X_train.shape[1])
             for f_idx, w in exp.as_map()[label]:
                 weights[f_idx] = w
-        # ────────────────────────────────────────────────────────────────
 
         explanations.append(weights)
 

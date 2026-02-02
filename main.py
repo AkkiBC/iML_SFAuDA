@@ -95,41 +95,79 @@ NUM_RUNS = {
 
 def run_experiment(dataset_name, augmentation_fn, explainer, num_runs=5):
 
-    # =========================
+    # ────────────────────────────────────────────────
     # LOAD DATA
-    # =========================
+    # ────────────────────────────────────────────────
     if dataset_name in ["iris", "wine"]:
         X_train_base, X_test, y_train_base, y_test = load_tabular_dataset(dataset_name)
         dataset_type = "tabular"
-    elif dataset_name == "mnist":  # ← MNIST
+    elif dataset_name == "mnist":
         X_train_base, X_test, y_train_base, y_test = load_image_dataset()
         dataset_type = "image"
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
+    # ────────────────────────────────────────────────
+    # RESET SCALERS FOR DATASET
+    # ────────────────────────────────────────────────
+    from augmentations import _SCALERS
+    _SCALERS['scale_standard'] = None
+    _SCALERS['scale_minmax'] = None
+    _SCALERS['scale_robust'] = None
+    print(f"[Reset] Cleared scalers for dataset '{dataset_name}'")
+
+    # ────────────────────────────────────────────────
+    # INITIALIZE SCALERS AND PREPARE SCALED TEST SETS
+    # ────────────────────────────────────────────────
+    X_test_standard = X_test.copy()
+    X_test_minmax   = X_test.copy()
+    X_test_robust   = X_test.copy()
+
+    if dataset_type == "tabular":
+        # Fit scalers on training data
+        _ = scale_standard(X_train_base, dataset_type="tabular")
+        _ = scale_minmax(X_train_base, dataset_type="tabular")
+        _ = scale_robust(X_train_base, dataset_type="tabular")
+
+        # Apply transformations to test data
+        X_test_standard = scale_standard(X_test, dataset_type="tabular")
+        X_test_minmax = scale_minmax(X_test, dataset_type="tabular")
+        X_test_robust = scale_robust(X_test, dataset_type="tabular")
+
+        # Debug print
+        print(f"[{dataset_name}] scale_standard test mean/std: "
+              f"{X_test_standard.mean(axis=0)[:2]} / {X_test_standard.std(axis=0)[:2]}")
+
     attributions = []
     accuracies = []
 
-    # =========================
-    # MNIST-SPECIFIC CONFIG
-    # =========================
-    expl_subsample_size = len(X_test)
+    expl_subsample_size = len(X_test)   # will be overridden below if needed
     lime_num_features = None
     lime_num_samples = None
 
-    if dataset_name == "mnist":  # ← MNIST
+    if dataset_name == "mnist":
         expl_subsample_size = 300
         if explainer == "lime":
             lime_num_features = 200
-            lime_num_samples = 5000
+            lime_num_samples  = 5000
 
-    # =========================
-    # RUNS
-    # =========================
+    # ────────────────────────────────────────────────
+    # MULTIPLE RUNS
+    # ────────────────────────────────────────────────
     for run in range(num_runs):
         np.random.seed(run)
 
         X_train_aug = augmentation_fn(X_train_base, dataset_type=dataset_type)
+
+        # Select the right test set
+        if augmentation_fn is scale_standard:
+            X_test_current = X_test_standard
+        elif augmentation_fn is scale_minmax:
+            X_test_current = X_test_minmax
+        elif augmentation_fn is scale_robust:
+            X_test_current = X_test_robust
+        else:
+            X_test_current = X_test.copy()
 
         model = train_model(
             X_train_aug,
@@ -137,11 +175,12 @@ def run_experiment(dataset_name, augmentation_fn, explainer, num_runs=5):
             dataset_type=dataset_type
         )
 
-        acc = evaluate_model(model, X_test, y_test)
+        acc = evaluate_model(model, X_test_current, y_test)
         accuracies.append(acc)
 
-        X_test_expl = X_test[:expl_subsample_size]  # ← MNIST (noop for tabular)
+        X_test_expl = X_test_current[:expl_subsample_size]
 
+        # explanations...
         if explainer == "shap":
             attrib = compute_shap_explanations(
                 model=model,
@@ -149,7 +188,6 @@ def run_experiment(dataset_name, augmentation_fn, explainer, num_runs=5):
                 X_test=X_test_expl,
                 dataset_name=dataset_name
             )
-
         elif explainer == "lime":
             attrib = compute_lime_explanations(
                 model=model,
@@ -157,14 +195,6 @@ def run_experiment(dataset_name, augmentation_fn, explainer, num_runs=5):
                 X_test=X_test_expl,
                 num_features=lime_num_features,
                 num_samples=lime_num_samples
-            )
-
-        else:
-            raise ValueError("Unknown explainer")
-
-        if attrib.ndim != 2:
-            raise ValueError(
-                f"Explainer {explainer} returned invalid shape {attrib.shape}"
             )
 
         attributions.append(attrib)

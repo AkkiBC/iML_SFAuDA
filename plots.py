@@ -1,22 +1,23 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
-# ────────────────────────────────────────────────
-#  At the top of the file (after imports)
-# ────────────────────────────────────────────────
+
+# =========================
+# AUGMENTATION ORDER & DISPLAY NAMES
+# =========================
 
 AUGMENTATION_ORDER = [
     'no_augmentation',
     'add_random_noise',
-    'feature_jitter',
     'geometric_transform',
+    'feature_jitter',
     'scale_standard',
     'scale_minmax',
     'scale_robust',
 ]
 
-# Optional: nicer display names (for labels only)
 AUGMENTATION_DISPLAY = {
     'no_augmentation': 'None',
     'add_random_noise': 'Add Noise',
@@ -28,24 +29,13 @@ AUGMENTATION_DISPLAY = {
 }
 
 
-# Retain the existing functions for stability intervals
-def plot_stability_interval_single(
-    df,
-    dataset,
-    explainer,
-    output_path,
-    trust_threshold=0.8,
-):
-    """
-    Plot mean explanation stability (point) with worst-case deviation (line)
-    for a single (dataset, explainer) pair.
-    """
+# =========================
+# SINGLE DATASET INTERVAL PLOT
+# =========================
 
-    sub = df[
-        (df["dataset"] == dataset) &
-        (df["expl_method"] == explainer)
-    ].reset_index(drop=True)
-
+def plot_stability_interval_single(df, dataset, explainer, output_path, trust_threshold=0.8):
+    sub = df[(df["dataset"] == dataset) & (df["expl_method"] == explainer)].reset_index(drop=True)
+    
     if sub.empty:
         print(f"Skipping empty plot: {dataset} / {explainer}")
         return
@@ -53,50 +43,18 @@ def plot_stability_interval_single(
     fig, ax = plt.subplots(figsize=(6, 4))
 
     x_positions = range(len(sub))
-
     color = "tab:blue" if dataset == "iris" else "tab:green"
 
     for i, row in sub.iterrows():
-        y_mean = row["mean_correlation"]
-        y_min = row["min_correlation"]
+        ax.scatter(i, row["mean_correlation"], color=color, edgecolor="black", s=90, zorder=3)
+        ax.vlines(i, row["min_correlation"], row["mean_correlation"], linewidth=3, alpha=0.7, zorder=2)
 
-        # Mean stability point
-        ax.scatter(
-            i,
-            y_mean,
-            color=color,
-            edgecolor="black",
-            s=90,
-            zorder=3
-        )
-
-        # Worst-case deviation (vertical line)
-        ax.vlines(
-            i,
-            ymin=y_min,
-            ymax=y_mean,
-            linewidth=3,
-            alpha=0.7,
-            zorder=2
-        )
-
-    # Trust threshold
-    ax.axhline(
-        trust_threshold,
-        linestyle="--",
-        color="red",
-        alpha=0.6,
-        label="Trust threshold"
-    )
-
+    ax.axhline(trust_threshold, linestyle="--", color="red", alpha=0.6, label="Trust threshold")
     ax.set_xticks(list(x_positions))
     ax.set_xticklabels(sub["augmentation"], rotation=30, ha="right")
-
     ax.set_ylabel("Explanation Stability")
     ax.set_xlabel("Augmentation Strategy")
-
     ax.set_title(f"{dataset.capitalize()} / {explainer.upper()}")
-
     ax.set_ylim(-0.3, 1.05)
     ax.grid(True, linestyle="--", alpha=0.5)
 
@@ -104,23 +62,17 @@ def plot_stability_interval_single(
     plt.savefig(output_path, dpi=300)
     plt.close()
 
-def plot_stability_interval_mnist(
-    df,
-    output_path,
-    trust_threshold=0.8,
-):
-    """
-    Plot MNIST stability with SHAP blocks first, then LIME blocks
-    in a single plot.
-    """
 
+# =========================
+# MNIST GROUPED INTERVAL PLOT
+# =========================
+
+def plot_stability_interval_mnist(df, output_path, trust_threshold=0.8):
     sub = df[df["dataset"] == "mnist"].reset_index(drop=True)
-
     if sub.empty:
         print("Skipping MNIST plot (no data)")
         return
 
-    # Split SHAP / LIME
     shap_df = sub[sub["expl_method"] == "shap"].reset_index(drop=True)
     lime_df = sub[sub["expl_method"] == "lime"].reset_index(drop=True)
 
@@ -130,70 +82,35 @@ def plot_stability_interval_mnist(
     xticks = []
     xticklabels = []
 
-    # ---------- SHAP ----------
+    # SHAP group
     for _, row in shap_df.iterrows():
-        ax.scatter(
-            x,
-            row["mean_correlation"],
-            color="tab:blue",
-            edgecolor="black",
-            s=90,
-            zorder=3,
-            label="SHAP" if x == 0 else None,
-        )
-        ax.vlines(
-            x,
-            row["min_correlation"],
-            row["mean_correlation"],
-            linewidth=3,
-            alpha=0.7,
-            zorder=2,
-            color="tab:blue",
-        )
+        ax.scatter(x, row["mean_correlation"], color="tab:blue", edgecolor="black", s=90, zorder=3,
+                   label="SHAP" if x == 0 else None)
+        ax.vlines(x, row["min_correlation"], row["mean_correlation"], linewidth=3, alpha=0.7, zorder=2,
+                  color="tab:blue")
         xticks.append(x)
         xticklabels.append(f"SHAP\n{row['augmentation']}")
         x += 1
 
-    # Gap between SHAP and LIME
-    x += 1
+    x += 1  # gap between groups
 
-    # ---------- LIME ----------
+    # LIME group
     for _, row in lime_df.iterrows():
-        ax.scatter(
-            x,
-            row["mean_correlation"],
-            color="tab:green",
-            edgecolor="black",
-            s=90,
-            zorder=3,
-            label="LIME" if "LIME" not in ax.get_legend_handles_labels()[1] else None,
-        )
-        ax.vlines(
-            x,
-            row["min_correlation"],
-            row["mean_correlation"],
-            linewidth=3,
-            alpha=0.7,
-            zorder=2,
-            color="tab:green",
-        )
+        ax.scatter(x, row["mean_correlation"], color="tab:green", edgecolor="black", s=90, zorder=3,
+                   label="LIME" if "LIME" not in ax.get_legend_handles_labels()[1] else None)
+        ax.vlines(x, row["min_correlation"], row["mean_correlation"], linewidth=3, alpha=0.9, zorder=2,
+                  color="tab:green")
         xticks.append(x)
         xticklabels.append(f"LIME\n{row['augmentation']}")
         x += 1
 
-    # Trust threshold
-    ax.axhline(
-        trust_threshold,
-        linestyle="--",
-        color="red",
-        alpha=0.6,
-        label="Trust threshold",
-    )
+    ax.axhline(trust_threshold, linestyle="--", color="red", alpha=0.9, label="Trust threshold")
 
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticklabels, rotation=30, ha="right")
     ax.set_ylabel("Explanation Stability")
-    ax.set_title("MNIST – Explanation Stability (SHAP vs LIME)")
+    ax.set_xlabel("Augmentation Strategy (Grouped by Explainer)")
+    ax.set_title("MNIST Explanation Stability")
     ax.set_ylim(-0.3, 1.05)
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend()
@@ -202,239 +119,76 @@ def plot_stability_interval_mnist(
     plt.savefig(output_path, dpi=300)
     plt.close()
 
-# New plotting functions to better highlight accuracy vs. stability trade-offs
 
-def plot_accuracy_vs_stability_scatter(
-    df,
-    stability_metric="min_correlation",
-    output_path="results/accuracy_vs_stability_scatter.png",
-    trust_threshold=0.8,
-):
-    """
-    Scatter plot of mean accuracy vs. stability (mean or min correlation).
-    Points colored by dataset, shaped by explainer, labeled by augmentation.
-    Highlights cases where accuracy is high but stability is low.
-    """
-    fig, ax = plt.subplots(figsize=(8, 6))
+# =========================
+# STABILITY HEATMAP
+# =========================
 
-    # Define colors and markers
-    dataset_colors = {
-        "iris": "tab:blue",
-        "wine": "tab:green",
-        "mnist": "tab:orange",
-    }
-    explainer_markers = {
-        "shap": "o",
-        "lime": "s",
-    }
-
-    used_positions = set()  # To avoid overlapping annotations if needed
-
-    for _, row in df.iterrows():
-        x = row["mean_accuracy"]
-        y = row[stability_metric]  # Use 'mean_correlation' or 'min_correlation'
-
-        ax.scatter(
-            x,
-            y,
-            color=dataset_colors.get(row["dataset"], "gray"),
-            marker=explainer_markers.get(row["expl_method"], "o"),
-            edgecolor="black",
-            s=90,
-            alpha=0.85,
-            zorder=3,
-        )
-
-        # Annotate with augmentation if stability is low
-        if y < trust_threshold:
-            ax.annotate(
-                row["augmentation"],
-                (x, y),
-                xytext=(5, 5),
-                textcoords="offset points",
-                fontsize=8,
-                arrowprops=dict(arrowstyle="->", alpha=0.5),
-            )
-
-    # Trust threshold horizontal line
-    ax.axhline(
-        y=trust_threshold,
-        linestyle="--",
-        color="red",
-        alpha=0.7,
-        label="Trust Threshold",
-    )
-
-    # Legends
-    from matplotlib.lines import Line2D
-
-    dataset_legend = [
-        Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=8, label=d)
-        for d, c in dataset_colors.items()
-    ]
-    explainer_legend = [
-        Line2D([0], [0], marker=m, color="w", markerfacecolor="gray", markersize=8, label=e)
-        for e, m in explainer_markers.items()
-    ]
-
-    ax.legend(handles=dataset_legend, title="Dataset", loc="upper left")
-    ax.add_artist(ax.legend(handles=explainer_legend, title="Explainer", loc="upper right"))
-
-    ax.set_xlabel("Mean Accuracy")
-    ax.set_ylabel(f"Explanation Stability ({stability_metric.replace('_', ' ').title()})")
-    ax.set_title("Accuracy vs. Explanation Stability Across Configurations")
-    ax.set_xlim(0.3, 1.05)  # Based on your data range
-    ax.set_ylim(-1.05, 1.05)
-    ax.grid(True, linestyle="--", alpha=0.5)
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
-
-def plot_dual_axis_bar(
-    df,
-    dataset,
-    explainer,
-    output_path,
-    trust_threshold=0.8,
-):
-    sub = df[
-        (df["dataset"] == dataset) &
-        (df["expl_method"] == explainer)
-    ]
-
-    if sub.empty:
-        print(f"Skipping empty plot: {dataset} / {explainer}")
-        return
-
-    # Sort using the defined order (missing augs are ignored)
-    sub = sub.copy()
-    sub['aug_sort'] = sub['augmentation'].map(
-        {aug: i for i, aug in enumerate(AUGMENTATION_ORDER)}
-    )
-    sub = sub.sort_values('aug_sort').drop(columns='aug_sort').reset_index(drop=True)
-
-    fig, ax1 = plt.subplots(figsize=(9, 5.5))  # slightly wider
-
-    # Bars: accuracy
-    bars = ax1.bar(
-        range(len(sub)),
-        sub["mean_accuracy"],
-        color="tab:blue",
-        alpha=0.75,
-        label="Mean Accuracy",
-        zorder=3,
-    )
-    ax1.set_ylabel("Mean Accuracy", color="tab:blue")
-    ax1.tick_params(axis="y", labelcolor="tab:blue")
-    ax1.set_ylim(0, 1.05)
-
-    # Set x-ticks early
-    ax1.set_xticks(range(len(sub)))
-    ax1.set_xticklabels(
-        [AUGMENTATION_DISPLAY.get(a, a.replace('_', ' ').title()) for a in sub["augmentation"]],
-        rotation=40,
-        ha="right",
-    )
-
-    # Line + error for stability (right axis)
-    ax2 = ax1.twinx()
-    ax2.errorbar(
-        range(len(sub)),
-        sub["mean_correlation"],
-        yerr=(sub["mean_correlation"] - sub["min_correlation"], [0]*len(sub)),
-        fmt="o-",
-        color="tab:red",
-        linewidth=2.2,
-        markersize=8,
-        capsize=6,
-        label="Stability (Mean with Min Error)",
-        zorder=4,
-    )
-    ax2.set_ylabel("Explanation Stability", color="tab:red")
-    ax2.tick_params(axis="y", labelcolor="tab:red")
-    ax2.set_ylim(-0.4, 1.05)
-
-    # Trust threshold
-    ax2.axhline(trust_threshold, linestyle="--", color="gray", alpha=0.7, label="Trust Threshold")
-
-    ax1.set_xlabel("Augmentation Strategy")
-    ax1.set_title(f"{dataset.capitalize()} / {explainer.upper()}: Accuracy vs. Stability")
-
-    # Legend – move to lower right (or try 'upper center' / 'lower center')
-    handles1, labels1 = ax1.get_legend_handles_labels()
-    handles2, labels2 = ax2.get_legend_handles_labels()
-    ax2.legend(handles1 + handles2, labels1 + labels2, 
-               loc="lower left", fontsize=9, framealpha=0.92)
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
-    plt.close()
-
-def plot_stability_heatmap(
-    df,
-    output_path="results/stability_heatmap.png",
-):
-    # Define row order: group by dataset, SHAP before LIME, iris/wine before mnist
+def plot_stability_heatmap(df, output_path="results/stability_heatmap_min.png", value_col="min_correlation"):
+    # Row order: iris/wine/mnist → SHAP then LIME
     row_order = []
     for ds in ['iris', 'wine', 'mnist']:
         for expl in ['shap', 'lime']:
             if ((df["dataset"] == ds) & (df["expl_method"] == expl)).any():
                 row_order.append(f"{ds}-{expl}")
 
-    # Column order using AUGMENTATION_ORDER
     col_order = [a for a in AUGMENTATION_ORDER if a in df["augmentation"].unique()]
 
-    # Pivot min_correlation
+    # Pivot
     pivot = df.pivot_table(
         index=["dataset", "expl_method"],
         columns="augmentation",
-        values="min_correlation",
-        aggfunc="first"   # in case of duplicates
-    ).reindex(index=pd.MultiIndex.from_tuples(
-        [(ds, expl) for ds, expl in [r.split('-') for r in row_order]],
-        names=["dataset", "expl_method"]
-    ), columns=col_order).fillna(0)
-
-    # Pivot for accuracy annotations
-    acc_pivot = df.pivot_table(
-        index=["dataset", "expl_method"],
-        columns="augmentation",
-        values="mean_accuracy",
+        values=value_col,
         aggfunc="first"
-    ).reindex_like(pivot).fillna(0)
+    ).reindex(
+        index=pd.MultiIndex.from_tuples(
+            [(ds, expl) for ds, expl in [r.split('-') for r in row_order]],
+            names=["dataset", "expl_method"]
+        ),
+        columns=col_order
+    )
 
-    fig, ax = plt.subplots(figsize=(11, 7))
+    fig, ax = plt.subplots(figsize=(11, 6.5))
+
+    cmap = sns.diverging_palette(10, 130, s=80, l=55, as_cmap=True)
 
     sns.heatmap(
         pivot,
-        annot=acc_pivot.map(lambda x: f"{x:.2f}" if x > 0 else ""),
+        cmap=cmap,
+        vmin=-0.1,
+        vmax=1.0,
+        center=0.5,
+        annot=pivot.map(lambda x: f"{x:.3f}" if pd.notna(x) else ""),
         fmt="",
-        cmap="RdYlGn_r",          # green=high stability, red=low
-        linewidths=0.6,
+        linewidths=0.9,
         linecolor="white",
+        cbar_kws={"label": f"{value_col.replace('_', ' ').title()}"},
         ax=ax,
-        cbar_kws={"label": "Min Correlation (Worst-case Stability)"},
-        annot_kws={"size": 9, "weight": "bold"},
+        annot_kws={"size": 9.5, "weight": "bold"},
     )
 
-    # Improve labels
+    # Gray out missing values
+    for i in range(pivot.shape[0]):
+        for j in range(pivot.shape[1]):
+            if pd.isna(pivot.iloc[i, j]):
+                ax.add_patch(plt.Rectangle((j, i), 1, 1, color='lightgray', lw=0, zorder=10))
+
+    # Nice labels
     ax.set_xticklabels(
         [AUGMENTATION_DISPLAY.get(t.get_text(), t.get_text().replace('_', ' ').title())
          for t in ax.get_xticklabels()],
-        rotation=45, ha="right"
+        rotation=40, ha="right", fontsize=10
     )
 
-    # Nicer y-labels
-    yticklabels = []
-    for label in ax.get_yticklabels():
-        text = label.get_text()
-        ds, expl = text.split('-') if '-' in text else (text, '')
-        nice = f"{ds.capitalize()} / {expl.upper()}"
-        yticklabels.append(nice)
-    ax.set_yticklabels(yticklabels, rotation=0)
+    yticklabels = [f"{ds.capitalize()} / {expl.upper()}" for text in ax.get_yticklabels()
+                   for ds, expl in [text.get_text().split('-')]]
+    ax.set_yticklabels(yticklabels, rotation=0, fontsize=10.5)
 
-    ax.set_title("Explanation Stability Heatmap\n(Annotations = Mean Accuracy)", fontsize=13, pad=15)
+    ax.set_title(
+        f"Stability of SHAP and LIME Explanations\n"
+        f"({value_col.replace('_', ' ').title()} across Augmentation Strategies)",
+        fontsize=14, pad=20
+    )
     ax.set_xlabel("Augmentation Strategy", fontsize=11)
     ax.set_ylabel("Dataset / Explainer", fontsize=11)
 
@@ -442,81 +196,171 @@ def plot_stability_heatmap(
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
 
-def plot_all_stability_intervals(
-    results_path="results/stability_scores.csv",
-    output_dir="results",
-):
-    """
-    Generate stability interval plots for all dataset–explainer pairs.
-    (Retained from original)
-    """
 
-    df = pd.read_csv(results_path)
-    # Exclude scaling-based augmentations for LIME (not meaningful)
-    df = df[
-        ~(
-            (df["expl_method"] == "lime") &
-            (df["augmentation"].isin([
-                "scale_standard",
-                "scale_minmax",
-                "scale_robust",
-            ]))
+# =========================
+# DUAL AXIS — ACCURACY + STABILITY
+# =========================
+
+def plot_dual_axis_combined(df, dataset, output_path, figsize=(9.5, 5.6)):
+    sub = df[df["dataset"] == dataset].copy()
+    if sub.empty:
+        return
+
+    ordered_augs = [a for a in AUGMENTATION_ORDER if a in sub["augmentation"].unique()]
+    if not ordered_augs:
+        return
+
+    acc_df = sub.groupby("augmentation")["mean_accuracy"].first().reindex(ordered_augs)
+
+    shap_mean = sub[sub["expl_method"] == "shap"].set_index("augmentation")["mean_correlation"].reindex(ordered_augs)
+    shap_min  = sub[sub["expl_method"] == "shap"].set_index("augmentation")["min_correlation"].reindex(ordered_augs)
+    lime_mean = sub[sub["expl_method"] == "lime"].set_index("augmentation")["mean_correlation"].reindex(ordered_augs)
+    lime_min  = sub[sub["expl_method"] == "lime"].set_index("augmentation")["min_correlation"].reindex(ordered_augs)
+
+    fig, ax1 = plt.subplots(figsize=figsize)
+
+    # Accuracy bars
+    x = np.arange(len(ordered_augs))
+    ax1.bar(x, acc_df, 0.58, color="lightgray", edgecolor="black", label="Mean Accuracy", zorder=1)
+    ax1.set_ylabel("Mean Accuracy")
+    ax1.set_ylim(0, 1.10)
+
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(
+        [AUGMENTATION_DISPLAY.get(a, a.replace("_", " ").title()) for a in ordered_augs],
+        rotation=42, ha="right"
+    )
+    ax1.set_xlabel("Augmentation Strategy")
+
+    # Stability (twin axis)
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("Explanation Stability (Correlation)")
+    ax2.set_ylim(-0.4, 1.05)
+
+    # SHAP
+    valid_shap = shap_mean.dropna()
+    if not valid_shap.empty:
+        xs = np.array([ordered_augs.index(a) for a in valid_shap.index])
+        ax2.plot(xs, valid_shap, color="navy", marker="o", ms=8, mec="black", mew=0.8,
+                 linewidth=2.4, label="SHAP Correlation", zorder=5)
+
+        for i, aug in enumerate(valid_shap.index):
+            xi = ordered_augs.index(aug)
+            ax2.vlines(xi, shap_min[aug], valid_shap[aug], color="navy", lw=3, alpha=0.7)
+
+    # LIME
+    valid_lime = lime_mean.dropna()
+    if not valid_lime.empty:
+        xs = np.array([ordered_augs.index(a) for a in valid_lime.index])
+        ax2.plot(xs, valid_lime, color="forestgreen", marker="o", ms=8, mec="black", mew=0.8,
+                 linewidth=2.4, label="LIME Correlation", zorder=5)
+
+        for i, aug in enumerate(valid_lime.index):
+            xi = ordered_augs.index(aug)
+            ax2.vlines(xi, lime_min[aug], valid_lime[aug], color="forestgreen", lw=3, alpha=0.7)
+
+    ax1.legend(loc='lower center', bbox_to_anchor=(0.5, -0.01), ncol=3)
+
+    ax1.set_title(f"{dataset.capitalize()} – Accuracy and Explanation Stability")
+    ax1.grid(True, linestyle="--", alpha=0.3)
+
+    plt.tight_layout(rect=[0, 0.06, 1, 0.96])
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+# =========================
+# ACCURACY vs STABILITY SCATTER
+# =========================
+
+def plot_accuracy_vs_stability_scatter(df, stability_metric="min_correlation",
+                                      output_path="results/accuracy_vs_stability_scatter.png",
+                                      trust_threshold=0.8):
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    dataset_colors = {"iris": "tab:blue", "wine": "tab:green", "mnist": "tab:orange"}
+    explainer_markers = {"shap": "o", "lime": "s"}
+
+    for _, row in df.iterrows():
+        ax.scatter(
+            row["mean_accuracy"],
+            row[stability_metric],
+            color=dataset_colors.get(row["dataset"], "gray"),
+            marker=explainer_markers.get(row["expl_method"], "o"),
+            edgecolor="black",
+            s=90,
+            alpha=0.85,
+            zorder=3
         )
-    ]
-    df = df.dropna(subset=["mean_correlation", "min_correlation"])
 
-    configs = [
-        ("iris", "shap"),
-        ("wine", "shap"),
-        ("iris", "lime"),
-        ("wine", "lime"),
-    ]
+        if row[stability_metric] < trust_threshold:
+            ax.annotate(
+                row["augmentation"],
+                (row["mean_accuracy"], row[stability_metric]),
+                xytext=(5, 5), textcoords="offset points",
+                fontsize=8, arrowprops=dict(arrowstyle="->", alpha=0.5)
+            )
+
+    ax.axhline(trust_threshold, linestyle="--", color="red", alpha=0.7, label="Trust Threshold")
+
+    from matplotlib.lines import Line2D
+    dataset_legend = [Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=8, label=d)
+                      for d, c in dataset_colors.items()]
+    explainer_legend = [Line2D([0], [0], marker=m, color="w", markerfacecolor="gray", markersize=8, label=e)
+                        for e, m in explainer_markers.items()]
+
+    ax.legend(handles=dataset_legend, title="Dataset", loc="upper left")
+    ax.add_artist(ax.legend(handles=explainer_legend, title="Explainer", loc="upper right"))
+
+    ax.set_xlabel("Mean Accuracy")
+    ax.set_ylabel(f"Explanation Stability ({stability_metric.replace('_', ' ').title()})")
+    ax.set_title("Accuracy vs. Explanation Stability Across Configurations")
+    ax.set_xlim(0.3, 1.05)
+    ax.set_ylim(-1.05, 1.05)
+    ax.grid(True, linestyle="--", alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
 
 
+# =========================
+# GENERATE ALL PLOTS
+# =========================
+
+def generate_all_plots(results_path="results/stability_scores.csv", output_dir="results"):
+    df = pd.read_csv(results_path)
+    df = df.dropna(subset=["mean_correlation", "min_correlation"], how="all")
+
+    # Interval plots (single + mnist grouped)
+    configs = [("iris", "shap"), ("wine", "shap"), ("iris", "lime"), ("wine", "lime")]
     for dataset, explainer in configs:
-        output_path = f"{output_dir}/stability_interval_{dataset}_{explainer}.png"
-
         plot_stability_interval_single(
-            df=df,
-            dataset=dataset,
-            explainer=explainer,
-            output_path=output_path
+            df, dataset, explainer,
+            f"{output_dir}/stability_interval_{dataset}_{explainer}.png"
         )
 
     plot_stability_interval_mnist(
-        df=df,
-        output_path=f"{output_dir}/stability_interval_mnist.png"
+        df, f"{output_dir}/stability_interval_mnist.png"
     )
 
-def generate_all_plots(
-    results_path="results/stability_scores.csv",
-    output_dir="results",
-):
-    """
-    Wrapper to generate all proposed plots.
-    """
-    df = pd.read_csv(results_path)
-    df = df.dropna(subset=["mean_correlation", "min_correlation"])
-
-    # Existing stability intervals
-    plot_all_stability_intervals(results_path=results_path, output_dir=output_dir)
-
-    # New plots
-    plot_accuracy_vs_stability_scatter(df, stability_metric="min_correlation", output_path=f"{output_dir}/accuracy_vs_min_stability.png")
-    plot_accuracy_vs_stability_scatter(df, stability_metric="mean_correlation", output_path=f"{output_dir}/accuracy_vs_mean_stability.png")
-
-    # Dual-axis for each config
-    configs = df[["dataset", "expl_method"]].drop_duplicates().values
-    for dataset, explainer in configs:
-        plot_dual_axis_bar(
-            df,
-            dataset,
-            explainer,
-            output_path=f"{output_dir}/dual_axis_{dataset}_{explainer}.png"
+    # Dual axis per dataset
+    for ds in sorted(df["dataset"].unique()):
+        plot_dual_axis_combined(
+            df, ds, f"{output_dir}/dual_axis_combined_{ds}.png"
         )
 
-    # Heatmap
-    plot_stability_heatmap(df, output_path=f"{output_dir}/stability_heatmap.png")
+    # Heatmaps — both mean and min
+    plot_stability_heatmap(df, f"{output_dir}/stability_heatmap_min.png",  value_col="min_correlation")
+    plot_stability_heatmap(df, f"{output_dir}/stability_heatmap_mean.png", value_col="mean_correlation")
+
+    # Final summary scatter
+    plot_accuracy_vs_stability_scatter(
+        df,
+        stability_metric="min_correlation",
+        output_path=f"{output_dir}/accuracy_vs_stability_scatter_min.png"
+    )
+
 
 if __name__ == "__main__":
     generate_all_plots()

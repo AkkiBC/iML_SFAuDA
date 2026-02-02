@@ -2,94 +2,84 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
 
-# --------------------------------------------------
-# Baseline
-# --------------------------------------------------
+# =========================
+# NO AUGMENTATION (BASELINE)
+# =========================
 
 def no_augmentation(X, dataset_type=None):
-    """
-    No data augmentation.
-    Serves as reference point for stability.
-    """
     return X
 
 
-# --------------------------------------------------
-# Noise-based (representation-perturbing)
-# --------------------------------------------------
+# =========================
+# NOISE-BASED AUGMENTATIONS
+# =========================
 
 def add_random_noise(X, noise_level=0.05, dataset_type=None):
-    """
-    Add isotropic Gaussian noise.
-    NOTE: Not representation-preserving, but useful as stress test.
-    """
     noise = np.random.normal(0, noise_level, X.shape)
     return X + noise
 
 
 def feature_jitter(X, noise_ratio=0.05, dataset_type=None):
-    """
-    Feature-wise Gaussian jitter proportional to feature std.
-    Considered a *mild* perturbation for tabular data.
-    """
     if dataset_type != "tabular":
         return X
-
     std = np.std(X, axis=0, keepdims=True)
     noise = np.random.normal(0, noise_ratio * std, size=X.shape)
     return X + noise
 
 
-# --------------------------------------------------
-# Preprocessing / representation-level perturbations
-# (Supervisor-approved)
-# --------------------------------------------------
+# =========================
+# SCALING / PREPROCESSING AUGMENTATIONS
+# =========================
+
+_SCALERS = {
+    'scale_standard': None,
+    'scale_minmax': None,
+    'scale_robust': None,
+}
+
+
+def _get_or_create_scaler(scaler_type, X_raw):
+    if _SCALERS[scaler_type] is None:
+        if scaler_type == 'scale_standard':
+            scaler = StandardScaler()
+        elif scaler_type == 'scale_minmax':
+            scaler = MinMaxScaler()
+        elif scaler_type == 'scale_robust':
+            scaler = RobustScaler()
+        else:
+            raise ValueError(f"Unknown scaler type: {scaler_type}")
+
+        scaler.fit(X_raw)
+        _SCALERS[scaler_type] = scaler
+    return _SCALERS[scaler_type]
+
 
 def scale_standard(X, dataset_type=None):
-    """
-    Standard scaling (zero mean, unit variance).
-    Representation-preserving preprocessing.
-    """
     if dataset_type != "tabular":
         return X
-
-    scaler = StandardScaler()
-    return scaler.fit_transform(X)
+    scaler = _get_or_create_scaler('scale_standard', X)
+    return scaler.transform(X)
 
 
 def scale_minmax(X, dataset_type=None):
-    """
-    Min–max scaling to [0, 1].
-    Representation-preserving preprocessing.
-    """
     if dataset_type != "tabular":
         return X
-
-    scaler = MinMaxScaler()
-    return scaler.fit_transform(X)
+    scaler = _get_or_create_scaler('scale_minmax', X)
+    return scaler.transform(X)
 
 
 def scale_robust(X, dataset_type=None):
-    """
-    Robust scaling using median and IQR.
-    Less sensitive to outliers.
-    """
     if dataset_type != "tabular":
         return X
+    scaler = _get_or_create_scaler('scale_robust', X)
+    return scaler.transform(X)
 
-    scaler = RobustScaler()
-    return scaler.fit_transform(X)
 
-
-# --------------------------------------------------
-# Image-only (for future MNIST extension)
-# --------------------------------------------------
+# =========================
+# IMAGE-SPECIFIC AUGMENTATION
+# =========================
 
 def geometric_transform(X, dataset_type=None):
-    """
-    Simple geometric shift for images (MNIST only).
-    NOT used for tabular data.
-    """
     if dataset_type != "image":
         return X
 
